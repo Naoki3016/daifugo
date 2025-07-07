@@ -1,79 +1,42 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import RoomForm from './components/RoomForm';
+import type { Room, GameState, Card } from '@daifugo/common';
+import './App.css';
 import WaitingRoom from './components/WaitingRoom';
 import GameTable from './components/GameTable';
-import type { Room, GameState, Player, Card } from '@daifugo/common'; // バックエンドの型定義をインポート
 
-// Replit のバックエンドURLに置き換える
-const SOCKET_SERVER_URL = 'https://daifugo-backend.your-username.replit.co/'; // 例: https://daifugo-backend.your-username.replit.co/
+const SERVER_URL = 'https://02de6151-6003-4198-a434-874e8f83fb22-00-1d1wfn0plma73.sisko.replit.dev'; // バックエンドのURL
 
 function App() {
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
+  const [room, setRoom] = useState<Room | null>(null);
+  const [playerName, setPlayerName] = useState<string>('');
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
-  const [isHost, setIsHost] = useState(false);
+  const [isGameStarted, setIsGameStarted] = useState<boolean>(false);
 
   useEffect(() => {
-    const newSocket = io(SOCKET_SERVER_URL);
+    const newSocket = io(SERVER_URL, { path: '/socket.io/' });
     setSocket(newSocket);
 
-    newSocket.on('connect', () => {
-      console.log('Connected to backend');
-      setMyPlayerId(newSocket.id || null); // 自分のSocket IDを保存
+    newSocket.on('roomState', (updatedRoom: Room) => {
+      setRoom(updatedRoom);
+      if (updatedRoom.gameState) {
+        setGameState(updatedRoom.gameState);
+        setIsGameStarted(true);
+      }
     });
 
-    newSocket.on('disconnect', () => {
-      console.log('Disconnected from backend');
-      setCurrentRoom(null);
-      setGameState(null);
-      setMyPlayerId(null);
-      setIsHost(false);
+    newSocket.on('gameStarted', (initialGameState: GameState) => {
+      setGameState(initialGameState);
+      setIsGameStarted(true);
     });
 
-    newSocket.on('roomCreated', (data: { roomId: string, room: Room }) => {
-      setCurrentRoom(data.room);
-      setIsHost(true);
-      console.log('Room created:', data.roomId);
-    });
-
-    newSocket.on('roomJoined', (data: { roomId: string, room: Room }) => {
-      setCurrentRoom(data.room);
-      setIsHost(false); // 参加者はホストではない
-      console.log('Room joined:', data.roomId);
-    });
-
-    newSocket.on('playerJoined', (data: { player: Player, room: Room }) => {
-      setCurrentRoom(data.room);
-      console.log('Player joined:', data.player.name);
-    });
-
-    newSocket.on('playerLeft', (data: { playerId: string, room: Room }) => {
-      setCurrentRoom(data.room);
-      console.log('Player left:', data.playerId);
-    });
-
-    newSocket.on('gameStarted', (state: GameState) => {
-      setGameState(state);
-      console.log('Game started!');
-    });
-
-    newSocket.on('gameUpdate', (state: GameState) => {
-      setGameState(state);
-      console.log('Game updated!');
-    });
-
-    newSocket.on('gameEnd', (data: { message: string, finishedPlayers: Player[] }) => {
-      console.log('Game ended:', data.message);
-      console.log('Finished Players:', data.finishedPlayers);
-      // ゲーム終了後の処理（カード交換フェーズへの移行など）
-      setGameState(null); // ゲーム状態をリセット
-      setCurrentRoom(prev => prev ? { ...prev, players: data.finishedPlayers } : null); // 順位を反映
+    newSocket.on('gameUpdate', (updatedGameState: GameState) => {
+      setGameState(updatedGameState);
     });
 
     newSocket.on('error', (message: string) => {
-      alert(`エラー: ${message}`);
+      alert(message);
     });
 
     return () => {
@@ -81,63 +44,73 @@ function App() {
     };
   }, []);
 
-  const handleCreateRoom = (maxPlayers: number, rules: any) => {
+  const handleCreateRoom = (name: string, maxPlayers: number, rules: any) => {
     if (socket) {
-      socket.emit('createRoom', { maxPlayers, rules });
+      setPlayerName(name);
+      socket.emit('createRoom', { playerName: name, maxPlayers, rules });
     }
   };
 
-  const handleJoinRoom = (roomId: string) => {
+  const handleJoinRoom = (name: string, id: string) => {
     if (socket) {
-      socket.emit('joinRoom', roomId);
+      setPlayerName(name);
+      socket.emit('joinRoom', { playerName: name, roomId: id });
     }
   };
 
   const handleStartGame = () => {
-    if (socket && currentRoom) {
-      socket.emit('startGame', currentRoom.id); // バックエンドにゲーム開始を通知
+    if (socket && room) {
+      socket.emit('startGame', room.id);
     }
   };
 
   const handlePlayCards = (cards: Card[]) => {
-    if (socket && currentRoom) {
-      socket.emit('playCards', { roomId: currentRoom.id, cards });
+    if (socket && room) {
+      socket.emit('playCards', { roomId: room.id, cards });
     }
   };
 
   const handlePass = () => {
-    if (socket && currentRoom) {
-      socket.emit('pass', currentRoom.id);
+    if (socket && room) {
+      socket.emit('pass', room.id);
     }
   };
 
-  let content;
-  if (!currentRoom) {
-    content = <RoomForm onCreateRoom={handleCreateRoom} onJoinRoom={handleJoinRoom} />;
-  } else if (currentRoom && !gameState) {
-    content = (
-      <WaitingRoom
-        roomId={currentRoom.id}
-        players={currentRoom.players}
-        isHost={isHost}
-        onStartGame={handleStartGame}
-      />
-    );
-  } else if (gameState) {
-    content = (
-      <GameTable
-        gameState={gameState}
-        myPlayerId={myPlayerId || ''}
-        onPlayCards={handlePlayCards}
-        onPass={handlePass}
-      />
-    );
-  }
+  const handleTransferCards = (cards: Card[]) => {
+    if (socket && room) {
+      socket.emit('transferCards', { roomId: room.id, cards });
+    }
+  };
+
+  const handleDiscardCards = (cards: Card[]) => {
+    if (socket && room) {
+      socket.emit('discardCards', { roomId: room.id, cards });
+    }
+  };
 
   return (
-    <div className="App">
-      <h1>オンライン大富豪</h1>
-      {content}
+    <div className="game-container">
+      {!isGameStarted && (
+        <WaitingRoom
+          room={room}
+          playerName={playerName}
+          myPlayerId={socket?.id || null}
+          onJoinRoom={handleJoinRoom}
+          onCreateRoom={handleCreateRoom}
+          onStartGame={handleStartGame}
+        />
+      )}
+      {isGameStarted && gameState && room && socket && (
+        <GameTable
+          gameState={gameState}
+          room={room}
+          onPlayCards={handlePlayCards}
+          onPass={handlePass}
+          onTransferCards={handleTransferCards}
+          onDiscardCards={handleDiscardCards}
+          currentPlayerId={socket.id || ''}
+        />
+      )}
     </div>
   );
 }

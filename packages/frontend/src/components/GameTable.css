@@ -1,0 +1,320 @@
+.game-table {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: 20% 50% 30%; /* Top players, Central, Bottom (my hand + buttons) */
+  grid-template-columns: 1fr;
+  position: relative;
+  overflow: hidden;
+}
+
+.round-animation {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 4rem; /* Use rem for font size */
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  animation: fadeInOut 2s ease-in-out forwards;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.2); }
+}
+
+/* Player Info Area */
+.player-info-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1px; /* Reference point for positioning */
+  height: 1px;
+}
+
+.player-info.other-player {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0; /* Rotate around the center of the container */
+  /* Initial positioning will be handled by inline style from JS */
+}
+
+.player-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: white;
+  font-size: 0.8rem; /* Use rem for font size */
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+  background-color: rgba(0, 0, 0, 0.3); /* Semi-transparent background */
+  padding: 0.5rem 1rem; /* Use rem for padding */
+  border-radius: 10px;
+}
+
+.player-avatar {
+  width: 3rem; /* Use rem for avatar size */
+  height: 3rem; /* Use rem for avatar size */
+  background-color: #555;
+  border-radius: 50%;
+  border: 2px solid white;
+  margin-bottom: 0.3rem; /* Use rem for margin */
+}
+
+.player-name {
+  font-weight: bold;
+}
+
+.player-hand-count {
+  font-size: 0.7rem; /* Use rem for font size */
+}
+
+.current-player-info {
+  position: absolute;
+  bottom: 1rem; /* Use rem for position */
+  left: 1rem; /* Use rem for position */
+  z-index: 50;
+  background-color: rgba(0, 0, 0, 0.3); /* Semi-transparent background */
+  padding: 0.5rem 1rem; /* Use rem for padding */
+  border-radius: 10px;
+}
+
+/* Central Play Area */
+.central-play-area {
+  grid-row: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.played-cards {
+  display: flex;
+  position: relative;
+  justify-content: center;
+  align-items: center;
+  min-height: 6rem; /* Use rem for min-height */
+}
+
+.card {
+  width: 4rem; /* Use rem for card size */
+  height: 5.5rem; /* Use rem for card size */
+  border-radius: 5px;
+  box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.5);
+  transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+}
+
+.card.selected {
+  transform: translateY(-0.5rem); /* Use rem for transform */
+  box-shadow: 5px 5px 12px rgba(0, 0, 0, 0.7);
+}
+
+.animating-card {
+  position: absolute;
+  z-index: 100;
+  transition: all 0.5s ease-out;
+}
+
+.discarding-card {
+  position: absolute;
+  z-index: 90;
+  transition: all 1s ease-in;
+  opacity: 1;
+}
+
+.discarding-card.animate-out {
+  transform: translateY(200%) scale(0.5);
+  opacity: 0;
+}
+
+.newly-dealt-card {
+  position: absolute;
+  z-index: 110;
+  transition: all 0.8s ease-out;
+  transform: translateY(-100vh); /* Start from top of screen */
+  opacity: 0;
+}
+
+.newly-dealt-card.animate-in {
+  transform: translateY(0) translateX(var(--card-offset));
+  opacity: 1;
+}
+
+.rule-display-area {
+  position: absolute;
+  right: 1rem; /* Use rem for position */
+  top: 1rem; /* Use rem for position */
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* Use rem for gap */
+  background-color: rgba(0, 0, 0, 0.4);
+  padding: 0.8rem; /* Use rem for padding */
+  border-radius: 8px;
+  font-size: 0.8rem; /* Use rem for font size */
+}
+
+.rule-tag {
+  background-color: #f44336;
+  color: white;
+  padding: 0.3rem 0.8rem; /* Use rem for padding */
+  border-radius: 5px;
+  text-align: center;
+  animation: pulse 1s infinite alternate; /* Add pulse animation */
+}
+
+@keyframes pulse {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(1.05); opacity: 0.8; }
+}
+
+/* My Hand Area */
+.my-hand-area {
+  grid-row: 3;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding-bottom: 5rem; /* Space for buttons */
+  position: relative;
+  height: 100%;
+}
+
+.my-card-wrapper {
+  position: absolute;
+  bottom: 0;
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+  cursor: pointer;
+}
+
+.my-card-wrapper .card {
+  position: static; /* Override absolute positioning from .card */
+}
+
+.my-card-wrapper.selected {
+  transform: translateY(-1rem); /* Use rem for transform */
+  box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.8);
+}
+
+/* Operation Button Area */
+.operation-button-area {
+  position: absolute;
+  bottom: 0.5rem; /* Use rem for position */
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 1rem; /* Use rem for gap */
+  z-index: 60;
+}
+
+.operation-button-area button {
+  padding: 0.8rem 1.5rem; /* Use rem for padding */
+  font-size: 1rem; /* Use rem for font size */
+  font-weight: bold;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background-color: #4CAF50; /* Green */
+  color: white;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.operation-button-area button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.operation-button-area button:hover:not(:disabled) {
+  background-color: #45a049;
+  transform: translateY(-0.1rem); /* Use rem for transform */
+}
+
+.transfer-discard-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 200;
+  color: white;
+}
+
+.transfer-discard-overlay h3 {
+  margin-bottom: 1rem; /* Use rem for margin */
+  font-size: 2rem; /* Use rem for font size */
+}
+
+.transfer-discard-overlay p {
+  margin-bottom: 1.5rem; /* Use rem for margin */
+  font-size: 1.2rem; /* Use rem for font size */
+}
+
+.transfer-discard-buttons {
+  display: flex;
+  gap: 1rem; /* Use rem for gap */
+}
+
+.transfer-discard-buttons button {
+  padding: 0.8rem 1.5rem; /* Use rem for padding */
+  font-size: 1rem; /* Use rem for font size */
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background-color: #2196F3; /* Blue */
+  color: white;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+  transition: background-color 0.2s;
+}
+
+.transfer-discard-buttons button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.transfer-discard-buttons button:hover:not(:disabled) {
+  background-color: #1976D2;
+}
+
+/* Media queries for smaller screens */
+@media (max-width: 480px) {
+  html { font-size: 14px; } /* Adjust base font size for smaller screens */
+  .player-info {
+    font-size: 0.7rem;
+  }
+  .player-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  .player-hand-count {
+    font-size: 0.6rem;
+  }
+  .card {
+    width: 3.5rem;
+    height: 4.8rem;
+  }
+  .my-hand-area {
+    padding-bottom: 4rem;
+  }
+  .operation-button-area button {
+    font-size: 0.9rem;
+    padding: 0.6rem 1.2rem;
+  }
+  .transfer-discard-overlay h3 {
+    font-size: 1.8rem;
+  }
+  .transfer-discard-overlay p {
+    font-size: 1rem;
+  }
+  .transfer-discard-buttons button {
+    font-size: 0.9rem;
+    padding: 0.6rem 1.2rem;
+  }
+}
