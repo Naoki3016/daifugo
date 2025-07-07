@@ -12,9 +12,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.12.4",
+  
   "dependencies": {
-    "@daifugo/common": "workspace:*",
+    "@daifugo/common": "file:../common",
     "express": "^5.1.0",
     "socket.io": "^4.8.1"
   },

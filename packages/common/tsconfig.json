@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
+    "composite": true,
     "target": "es2022",
-    "module": "commonjs",
+    "module": "NodeNext",
     "lib": ["es2022"],
     "outDir": "./dist",
     "rootDir": "./src",
