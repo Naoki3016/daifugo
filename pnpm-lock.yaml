@@ -6,10 +6,12 @@ settings:
 
 importers:
 
+  .: {}
+
   packages/backend:
     dependencies:
       '@daifugo/common':
-        specifier: workspace:*
+        specifier: file:../common
         version: link:../common
       express:
         specifier: ^5.1.0
@@ -40,7 +42,7 @@ importers:
   packages/frontend:
     dependencies:
       '@daifugo/common':
-        specifier: workspace:*
+        specifier: file:../common
         version: link:../common
       react:
         specifier: ^19.1.0
